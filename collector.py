@@ -76,7 +76,7 @@ def registData():
   conn.commit()
 
   # put log
-  logMes = '{ date: ' + ave['date'] + ', temp: ' + str(ave['temp']) + ', humi: ' + str(ave['humi']) + ', co2: ' + str(ave['co2']) + ' }'
+  logMes = '{ date: ' + ave['date'] + ', temp: ' + str(ave['temp']) + ', humi: ' + str(ave['humi']) + '}'
   putLog(LogLevel.info, 'Registed average values', logMes)
 
   collect.clear()
