@@ -40,8 +40,8 @@ def initalize():
   )
   cur = conn.cursor()
   # put log
-  logMes = 'Started Room Enviroments Collector!'
-  putLog(LogLevel.info, 'Initalized', logMes)
+  logMes = 'Room Enviroments Collector'
+  putLog(LogLevel.info, 'started', logMes)
 
 # データ収集
 def collectData():
@@ -76,8 +76,8 @@ def registData():
   conn.commit()
 
   # put log
-  logMes = '{ date: ' + ave['date'] + ', temp: ' + str(ave['temp']) + ', humi: ' + str(ave['humi']) + '}'
-  putLog(LogLevel.info, 'Registed average values', logMes)
+  logMes = 'average: { temp: ' + str(ave['temp']) + ', humi: ' + str(ave['humi']) + '}'
+  putLog(LogLevel.info, 'registed', logMes)
 
   collect.clear()
 
@@ -134,12 +134,12 @@ if __name__ == '__main__':
 
   except:
     # put log
-    logMes = 'Exception occurrence: ' + str(sys.exc_info())
-    putLog(LogLevel.fatal, 'Exception occurrence', logMes)
+    logMes = str(sys.exc_info())
+    putLog(LogLevel.fatal, 'exception', logMes)
     
     GPIO.cleanup()
     logMes = 'GPIO Cleanuped!'
-    putLog(LogLevel.info, 'Exit program', logMes)
+    putLog(LogLevel.info, 'exit', logMes)
     
     journal.send("DB Close")
     cur.close()
