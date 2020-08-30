@@ -1,31 +1,27 @@
 #!/usr/bin/env python3
 
-import RPi.GPIO as GPIO
+import os
 import sys
-import dht11
 import time
 import datetime
 import math
+import RPi.GPIO as GPIO
+import dht11
 import mysql.connector
-from systemd import journal
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from MySQLConnector.mysqlconnector import MySqlConnector
+from MyLogger.mylogger import MyLogger
 
 waitSecondsCount = 12
 collect = []
 dhtInstance = None
-conn = None
-cur = None
-
-class LogLevel:
-  info = 1
-  warn = 2
-  error = 3
-  fatal = 4
-  debug = 5
+db = None
+logger = None
 
 # 初期化
 def initalize():
-  global conn
-  global cur
+  global db
+  global logger
   global dhtInstance
   # GPIOの初期化
   GPIO.setwarnings(True)
@@ -34,14 +30,11 @@ def initalize():
   GPIO.setup(22, GPIO.OUT)
   GPIO.output(22, GPIO.HIGH)
   dhtInstance = dht11.DHT11(pin=23)
-  # init db conn
-  conn = mysql.connector.connect(
-    option_files='/home/pi/Scripts/mysql.conf'
-  )
-  cur = conn.cursor()
-  # put log
-  logMes = 'Room Enviroments Collector'
-  putLog(LogLevel.info, 'started', logMes)
+  # create instance
+  db = MySqlConnector()
+  logger = MyLogger('roomEnv')
+
+  logger.info('started', 'Room Enviroments Collector')
 
 # データ収集
 def collectData():
@@ -65,7 +58,7 @@ def registData():
   ave['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
   ave['temp'] = math.floor((tt / collectLength) * 10) / 10
   ave['humi'] = math.floor((th / collectLength) * 10) / 10
-  cur.execute(
+  db.cur.execute(
     "INSERT INTO RoomEnviroments (createAt, temputure, humidity) VALUES (%(date)s, %(temp)s, %(humi)s)",
     {
       'date': ave['date'],
@@ -73,12 +66,12 @@ def registData():
       'humi': ave['humi']
     }
   )
-  conn.commit()
+  db.conn.commit()
 
   # put log
   logMes = 'average: { temp: ' + str(ave['temp']) + ', humi: ' + str(ave['humi']) + '}'
-  putLog(LogLevel.info, 'registed', logMes)
-
+  logger.info('registed', logMes)
+  # clear collect items
   collect.clear()
 
 def getSensorValues():
@@ -101,19 +94,6 @@ def getSensorValues():
       'humi': 0
     }
 
-def putLog(logLv, subject, detail):
-  print(subject, detail)
-  journal.send(subject, detail)
-  cur.execute(
-    "INSERT INTO Logs (logFrom, level, subject, detail) VALUES ('RoomEnviromentCollector', %(level)s, %(subject)s, %(detail)s)",
-    {
-      'level': logLv,
-      'subject': subject,
-      'detail': detail
-    }
-  )
-  conn.commit()
-
 if __name__ == '__main__':
   prevMinute = -1
   try:
@@ -134,13 +114,10 @@ if __name__ == '__main__':
 
   except:
     # put log
-    logMes = str(sys.exc_info())
-    putLog(LogLevel.fatal, 'exception', logMes)
+    logger.fatal('exception', str(sys.exc_info()))
     
     GPIO.cleanup()
-    logMes = 'GPIO Cleanuped!'
-    putLog(LogLevel.info, 'exit', logMes)
+    logger.info('exit', 'GPIO Cleanuped!')
     
-    journal.send("DB Close")
-    cur.close()
-    conn.close()
+    db.close()
+    logger.close()
